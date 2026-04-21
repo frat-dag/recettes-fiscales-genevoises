@@ -1020,3 +1020,984 @@ jupyter notebook
 **Frat DAG**  
 Email : fratdag@gmail.com  
 LinkedIn : https://www.linkedin.com/in/fratdag/
+
+---
+---
+
+# Geneva Tax Revenue — Analysis and Forecasting 2007–2024
+
+**Author**: Frat DAG  
+**Date**: April 2026  
+**Data**: OCSTAT T18.02.1.15, FSO Regional Accounts, SNB data.snb.ch  
+**Languages**: R 4.x + Python 3.11
+
+---
+
+## The Opening Question
+
+Can we forecast the tax revenues of a Swiss canton using only publicly
+available data? And if so, what do the data actually tell us — and
+what are they unable to tell us?
+
+This is the central question of the project. The honest answer is: **yes,
+partially, with important limitations that we document along the way.**
+This README guides you through each step of the analysis, explaining
+not only what we did but why — and what we would have done differently
+with better data.
+
+---
+
+## TRAF Box — Read This First
+
+Before diving into the numbers, it is essential to understand an event
+that fundamentally reframes all data after 2022.
+
+The **Tax Reform and AHV Financing Act (TRAF)** is a **federal** reform
+that came into force on 1 January 2020. It applies to all Swiss cantons,
+but its effects on tax revenues vary considerably depending on each
+canton's economic structure. It abolished the old cantonal preferential
+tax regimes — special statuses that allowed certain multinationals to pay
+lower taxes — and replaced them with instruments compliant with OECD
+international standards, notably the patent box (tax reduction on patent
+income) and R&D deductions.
+
+**Why is Geneva particularly exposed?**
+Geneva hosts an exceptionally high proportion of multinational
+headquarters relative to its size — particularly in commodity trading
+(Vitol, Gunvor, Mercuria), finance and international organisations.
+Corporate income tax in Geneva is structurally sensitive to the profits
+of these large firms — far more so than in other cantons.
+
+**Why a break in 2022–2023 and not in 2020?**
+Two effects combine: first, a two-year transition period during which
+companies restructured their tax arrangements. Then, exceptional
+post-COVID profits in sectors over-represented in Geneva were taxed
+under the new regime, producing a sharp surge in revenues.
+
+**What we can assert, and what we cannot:**
+The 2022–2023 increase is *partially* attributable to TRAF. It cannot
+be precisely decomposed without disaggregated data by taxpayer type —
+these data are not publicly available. We therefore treat TRAF as
+a documented structural shock, captured via a dummy variable in our models.
+
+Sources: FTA (estv.admin.ch), Canton of Geneva (ge.ch),
+OECD Pillar 2 (oecd.org), OCSTAT (statistique.ge.ch)
+
+---
+
+## Glossary and Abbreviations
+
+For ease of reading, the terms and abbreviations used in this project
+are defined below, in the order they appear.
+
+**Institutions and sources**
+- **OCSTAT** — Office Cantonal de la STATistique — Geneva Cantonal Statistical Office
+- **FSO** — Federal Statistical Office (Switzerland)
+- **SNB** — Swiss National Bank
+- **FTA** — Federal Tax Administration
+
+**Tax terms**
+- **PIT** — Personal Income Tax (individuals)
+- **Individuals** — individual taxpayers (personnes physiques, PP)
+- **Legal entities** — companies and corporations (personnes morales, PM)
+- **DFT** — Direct Federal Tax — federal tax of which a share is redistributed to cantons
+- **TRAF** — Tax Reform and AHV Financing Act (see box above)
+- **enreg_timbre** — "Registration and stamp duty revenue" per OCSTAT nomenclature —
+  aggregates real estate transfer duties, stamp duties and other registration fees
+
+**Economic terms**
+- **GDP** — Gross Domestic Product — measure of the wealth produced in a given territory
+- **SARON** — Swiss Average Rate Overnight — Swiss reference interest rate
+  calculated daily by the SNB (see Data section)
+- **CAGR** — Compound Annual Growth Rate — average annual growth over the full period,
+  expressed as a percentage
+- **CV** — Coefficient of Variation — measure of a series' volatility,
+  expressed as a percentage. A higher CV means greater year-to-year unpredictability
+
+**Statistical terms**
+- **I(1)** — Integrated of order 1 — a series whose values drift over time
+  (see Statistical Tests section)
+- **Stationarity** — property of a series whose mean and variance remain
+  stable over time (see Statistical Tests section)
+- **Structural break** — a sudden and lasting change in a series' behaviour
+  (e.g. TRAF in 2022)
+- **Dummy variable** — a binary variable equal to 1 when an event has occurred,
+  0 otherwise. Used to capture the effect of a shock in a statistical model
+- **Cointegration** — a stable long-term relationship between several series
+  that each drift individually
+- **RMSE** — Root Mean Square Error — standard measure of model accuracy.
+  A lower RMSE means a more accurate model
+- **CI** — Confidence Interval — the range within which the true value
+  has an X% probability of falling
+
+**Statistical models**
+- **ARIMA** — AutoRegressive Integrated Moving Average — a time series model
+  that predicts future values from past values and past forecast errors
+- **ARIMAX** — ARIMA with eXogenous variables — ARIMA augmented with external
+  variables (here the TRAF dummy)
+- **ETS** — Error, Trend, Seasonality — an alternative to ARIMA that decomposes
+  a series into level, trend and seasonality components
+- **VAR** — Vector AutoRegression — a model that captures interactions
+  between multiple series simultaneously
+- **BSTS** — Bayesian Structural Time Series — a Bayesian model that decomposes
+  a series into latent components (level, trend) estimated jointly with the effect
+  of explanatory variables via MCMC. Particularly suited to short series with
+  structural breaks
+
+**Analytical methods**
+- **SHAP** — SHapley Additive exPlanations — a method that measures
+  each variable's contribution to each individual prediction
+- **Walk-forward** — a validation method that trains a model on past data
+  and tests it on future data, advancing one year at a time
+- **Bootstrap** — a resampling method that generates hundreds or thousands
+  of artificial samples from existing data to estimate the stability
+  and uncertainty of a statistical estimate
+- **MCMC** — Markov Chain Monte Carlo — a sampling algorithm used in Bayesian
+  statistics to explore the posterior distribution of parameters. Produces
+  a chain of values whose distribution converges to the target distribution
+- **ADF** — Augmented Dickey-Fuller test — stationarity test
+- **PP** — Phillips-Perron test — alternative stationarity test
+- **KPSS** — Kwiatkowski-Phillips-Schmidt-Shin test — a stationarity test
+  that operates in the opposite direction to ADF and PP
+
+---
+
+## Data — Why These Sources, Why These Choices
+
+### What Was Available and What We Retained
+
+| Source | Series | Period | N |
+|--------|--------|--------|---|
+| OCSTAT T18.02.1.15 | Geneva tax revenues (20 items) | 2007–2024 | 18 |
+| FSO Regional Accounts | Geneva nominal GDP | 2008–2022 | 15 |
+| SNB data.snb.ch | SARON (monthly → annual) | 2007–2024 | 18 |
+| FSO via SNB | Swiss CPI total (monthly → annual) | 2007–2024 | 18 |
+
+The project's main constraint is simple: **N=18 annual observations**.
+OCSTAT publishes cantonal tax revenues at annual resolution only —
+no quarterly or monthly data are publicly available. This is a source
+constraint, not a choice.
+
+With 18 observations, the statistical power of our tests is low.
+We acknowledge this and document it throughout — which is precisely
+why we triangulate across multiple tests rather than relying on any single one.
+
+### Why SARON and Not the SNB Policy Rate or LIBOR?
+
+The **SNB policy rate** in its current form only exists since 2019 —
+it does not cover our 2007–2024 analysis period. **LIBOR** (London
+Interbank Offered Rate) was progressively discontinued between 2021 and 2023
+and replaced in Switzerland precisely by the SARON. The **SARON** (Swiss
+Average Rate Overnight) covers our entire 2007–2024 period, is calculated
+daily by the SNB from actual transactions in the Swiss money market,
+and has been the official reference since LIBOR's cessation. It is therefore
+the only coherent choice across the full period.
+
+### Why Does Geneva GDP Stop in 2022?
+
+FSO regional accounts are published with a 2–3 year lag.
+As of April 2026, available data stop at 2022 (provisional).
+This is why GDP is not used as a regressor in forecasting models —
+one cannot forecast 2025–2027 using a variable whose recent values
+are unknown.
+
+### Note on PIT Nomenclature
+
+From 2012 onwards, OCSTAT separated withholding taxes from income tax
+in its nomenclature. Before 2012, the two were grouped together.
+As a result, PIT appears to decline nominally over 2007–2024, whereas
+this is an accounting artefact. We use `pp_total` (total personal
+taxes) as a consistent proxy across the full period.
+
+---
+
+## Approach Summary — Before Getting Into the Details
+
+This project follows an **inductive approach**: the data raise the questions,
+the questions determine the tests, the tests determine the models.
+We do not choose methods before looking at the data.
+
+**What we are trying to find out:**
+Are Geneva's tax revenues forecastable? What factors drive year-to-year
+variation? Has TRAF genuinely altered the revenue structure?
+
+**What we know in advance will be problematic:**
+N=18 is a very small sample for serious econometric methods. Statistical
+tests lack power. Models risk being unstable. The 2022 break is so recent
+that it is hard to treat formally. We know this, we accept it, and we
+proceed anyway — because honestly documenting the limitations of an
+analysis on real public data is more valuable than doing nothing.
+
+**The six-step approach:**
+1. Look at the data without preconceptions — what do they tell us?
+2. Formally test what we observed visually
+3. Build models from simplest to most complex
+4. Analyse which variables explain the variation
+5. Validate models on data they have not seen
+6. Triangulate key results from an independent Bayesian framework
+
+---
+
+## Project Structure
+
+```
+recettes-fiscales-genevoises/
+├── README.md
+├── R/
+│   ├── scripts/
+│   │   ├── 01_exploration.R
+│   │   ├── 02_tests.R
+│   │   ├── 03_modeles.R
+│   │   ├── 04_shap.R
+│   │   ├── 04b_walkforward.R
+│   │   └── 05_robustesse_BSTS.R      ← Bayesian robustness analysis
+│   └── figures/
+│       ├── 01_total_evolution.png
+│       ├── 01_decomposition.png
+│       ├── 02_stationnarite_visuelle.png
+│       ├── 03_comparaison_modeles.png
+│       ├── 03_residus_modele_retenu.png
+│       ├── 04_shap_importance.png
+│       ├── 04_shap_beeswarm.png
+│       ├── 04_shap_vs_rf_importance.png
+│       ├── 04b_walkforward.png
+│       ├── 04b_erreurs_walkforward.png
+│       ├── 05_bootstrap_rffa.png
+│       └── 05_bsts_posterieur.png
+└── Python/
+    ├── notebooks/
+    │   ├── 01_exploration.ipynb
+    │   ├── 02_tests.ipynb
+    │   ├── 03_modeles.ipynb
+    │   ├── 04_shap.ipynb
+    │   └── 04b_walkforward.ipynb
+    └── figures/                       ← _py suffix to distinguish from R
+        ├── 01_correlation_heatmap_py.png
+        ├── 03_comparaison_modeles_py.png
+        ├── 04_shap_importance_py.png
+        ├── 04_shap_beeswarm_py.png
+        └── 04b_erreurs_walkforward_py.png
+```
+
+---
+
+## 1. Exploration (script 01)
+
+### What We Are Looking For at This Stage
+
+Before any test, before any model: look at the data as they are.
+We look for trends, anomalies, visual breaks, and questions that the
+data raise naturally. These questions will structure everything that follows.
+
+### What the Data Show Us
+
+![Geneva tax revenue trend 2007–2024](R/figures/01_total_evolution.png)
+
+Geneva's tax revenues grew from CHF 5,971M in 2007 to CHF 9,269M in 2024,
+a compound annual growth rate (CAGR) of +2.62%/year. But this average
+conceals very different trajectories across components.
+
+![Revenue decomposition by component](R/figures/01_decomposition.png)
+
+**What the chart reveals immediately:**
+
+Growth is not uniform across components. Personal income tax (PIT) —
+the largest component — declines nominally over the period (-0.49%/year).
+This is an OCSTAT 2012 nomenclature artefact (see Data section),
+not a real economic phenomenon. By contrast, corporate income tax (ben_pm)
+grows at +3.97%/year and the cantonal share of DFT at +5.18%/year.
+These are the components driving the total upward.
+
+**What this means in practice:**
+Geneva's tax revenue growth is structurally driven by corporates,
+not households. Geneva is fiscally dependent on the profit cycles
+of its large firms — which explains both its prosperity during periods
+of strong corporate results and its vulnerability to multinational
+economic cycles.
+
+**Atypical years:**
+- **2010: -6.4%** — aftershock of the 2008 financial crisis
+- **2018: +8.0%** — a jump exceeding the normal trend, first signal
+  of a fiscal recomposition
+- **2020: +1.2%** — COVID produced no fiscal break in Geneva,
+  reflecting the resilience of the local economic fabric
+- **2022: +17.8%** — major structural break linked to TRAF (see box)
+
+**Relative volatility by component (CV):**
+
+| Component | CV | Interpretation |
+|-----------|-----|----------------|
+| PIT | 9.7% | Very stable — follows employment |
+| PP total | 12.8% | Stable |
+| Corporate income tax | 31.7% | Volatile — follows profit cycles |
+| Wealth tax | 30.0% | Volatile |
+| Registration & stamp duties | 25.4% | Moderately volatile |
+| Inheritance tax | 37.8% | Very volatile — 2009 outlier |
+| DFT | 40.8% | Very volatile — amplified by TRAF |
+
+**Seven questions emerge from this exploration:**
+These questions entirely structure script 02 — we only test
+what the data have asked us to test.
+
+---
+
+## 2. Statistical Tests (script 02)
+
+### Why Test Before Modelling?
+
+Building a model on data we do not understand is like building a house
+without surveying the ground. The statistical tests in this section
+answer fundamental questions: do the series drift over time? Were there
+real structural breaks? Are the variables genuinely related, or is it
+an illusion?
+
+The answers directly determine which models we can use in the next section.
+We do not choose models before having these answers.
+
+### Q7 — Why Is PIT Declining? (Addressed First)
+
+This question is addressed before the stationarity tests because it
+conditions everything else. If PIT declines for an accounting reason
+rather than an economic one, including raw PIT in our tests and models
+introduces measurement bias — like measuring growth while changing units
+mid-series.
+
+**What we find:**
+In 2012, OCSTAT separated withholding taxes from income tax.
+PIT 2007–2011 included withholding taxes. PIT 2012–2024 does not.
+
+| Period | Average PIT |
+|--------|-------------|
+| 2007–2011 (with withholding taxes) | CHF 3,186M |
+| 2012–2024 (without withholding taxes) | CHF 2,731M |
+| 2012–2024 (corrected, with withholding taxes) | CHF 3,617M |
+
+The PIT decline is an accounting artefact. We use `pp_total`
+(total personal taxes) as a consistent proxy across the full period 2007–2024.
+
+### Q1 — Are the Series Stationary?
+
+**Why this matters:**
+A **stationary** series oscillates around a stable mean — like a pendulum
+that always returns to its equilibrium position. A **non-stationary**
+(or I(1)) series drifts over time without a fixed anchor — like a boat
+adrift on a choppy sea.
+
+If we model a non-stationary series without knowing it, we obtain results
+that appear robust but are in fact noise. Two series that both trend upward
+will appear strongly correlated even with no real link — this is
+**spurious correlation**, one of the classic traps of econometrics.
+
+**Why three tests and not one?**
+With N=18 observations, no single test is reliable — statistical power
+is too low. Using three tests that operate differently allows us to
+triangulate conclusions:
+
+- **ADF (Augmented Dickey-Fuller)**: tests whether the series has a unit
+  root (sign of non-stationarity), controlling for autocorrelation
+- **PP (Phillips-Perron)**: same objective as ADF but with a different
+  correction — more robust to certain forms of irregularity
+- **KPSS**: tests in the opposite direction — H0 is "the series is
+  stationary". If both ADF and KPSS indicate non-stationarity,
+  the conclusion is far stronger than with a single test
+
+We also used the **Zivot-Andrews** test, which endogenously identifies
+(without presupposing the date) the most likely break point in the series.
+Unlike the Chow test which tests a date fixed a priori, Zivot-Andrews asks:
+"if a break exists, when is it most likely?"
+
+![Fiscal series — Level and first difference](R/figures/02_stationnarite_visuelle.png)
+
+*The chart shows each series in levels (left) and after differencing (right).
+A differenced stationary series oscillates around zero without trend —
+this is what we seek to confirm.*
+
+**Results of the ADF + PP + KPSS triangulation:**
+
+| Series | Conclusion |
+|--------|-----------|
+| Total revenues | I(1) — confirmed by all three tests |
+| PP total | I(1) — confirmed by all three tests |
+| Wealth tax PP | I(1) — confirmed by all three tests |
+| DFT | I(1) — KPSS confirms despite ambiguous ADF |
+| Corporate income tax | Ambiguous — treated as I(1) as TRAF break disturbs tests |
+| Registration & stamp duties | Ambiguous — used as potential regressor only |
+
+**Zivot-Andrews detects:**
+- Total revenues: endogenous break in 2018
+- Corporate income tax: endogenous break in 2019
+- DFT: no clear structural break
+
+*These dates are consistent with the +8% jump observed in 2018 —
+the first signal of a fiscal recomposition before the major 2022 break.*
+
+**Implications for what follows:**
+The series are I(1) — they drift over time. We will need to work
+with annual changes rather than raw levels. This conclusion directly
+determines the type of models usable in script 03.
+
+### Q2 — Were There Confirmed Structural Breaks?
+
+**Why this matters:**
+A structural break is a sudden and lasting change in a series' behaviour.
+If undetected and untreated, the model will try to explain the break
+through the normal trend, biasing all forecasts.
+
+**Method — Chow Test:**
+The Chow test checks whether a regression's parameters change significantly
+before and after a break point chosen a priori.
+
+| Year tested | F-stat | p-value | Conclusion |
+|-------------|--------|---------|-----------|
+| 2010 | 4.197 | 0.037 | **Break confirmed** — aftershock of 2008 crisis |
+| 2020 | 18.59 | ≈0 | **Break confirmed** — Geneva's resilience |
+| 2022 | — | — | Not testable — only 3 observations after 2022 |
+
+*2020 shows a highly significant break but in the direction of resilience —
+revenues did not fall as might have been expected. The 2022 break cannot
+be formally tested — it is treated via a dummy variable in Q6.*
+
+### Q3 — How to Handle the 2009 Inheritance Tax Outlier?
+
+Inheritance tax revenues in 2009 reached CHF 308M against a series median
+of CHF 188M — a 1.7 sigma deviation. This spike likely reflects exceptional
+inheritances settled in the post-2008 financial crisis context.
+
+**Decision:** The inheritance tax series is excluded from the main modelling
+due to its volatility (CV=37.8%) and this outlier. A dummy variable is
+created as a reserve for potential use.
+
+### Q4 — Are the Series Related Over the Long Term?
+
+**Why this matters:**
+If multiple I(1) series share a stable long-term relationship despite
+their individual drift — this is **cointegration** — the appropriate
+model is a VECM. Otherwise, we use a VAR in differences,
+simpler and more conservative.
+
+**Results — Johansen Test:**
+- Trace test: suggests cointegration
+- Maximum eigenvalue test: does not reject absence of cointegration at 5%
+
+The two tests diverge — which is common with small samples.
+By the precautionary principle: **no confirmed cointegration → VAR in differences.**
+
+### Q5 — Are the Observed Correlations Real or Spurious?
+
+**The spurious correlation trap:**
+Two series that both trend upward will appear strongly correlated
+even without any causal link. To detect this trap, we recompute
+correlations on **annual changes** rather than raw levels.
+
+**Most striking result:**
+
+| Variable | Correlation with total (levels) | Correlation with total (differences) | Verdict |
+|----------|---------------------------------|--------------------------------------|---------|
+| Wealth tax PP | 0.86 | **0.05** | Spurious — excluded |
+| Corporate income tax | 0.89 | 0.71 | Real |
+| Geneva GDP | 0.96 | 0.61 | Real and structural |
+| DFT | 0.93 | 0.50 | Real |
+| SARON | -0.36 | 0.44 | Real (via employment cycle) |
+
+*Wealth tax is the most striking case: a 0.86 correlation in levels
+that collapses to 0.05 in differences. Had we included wealth tax
+as a regressor without this test, we would have built a model on sand.*
+
+### Q6 — How to Quantify the TRAF Effect?
+
+**What dummy variables do:**
+A dummy variable equals 1 when an event has occurred and 0 otherwise.
+Its coefficient measures the average effect of that event on the modelled
+variable, all else equal.
+
+**Three dummies created and tested:**
+
+| Dummy | Definition | Coefficient | p-value | Decision |
+|-------|-----------|-------------|---------|---------|
+| dummy_rffa | =1 if year ≥ 2022 | +CHF 1,729M | ≈0 | **Included in all models** |
+| dummy_covid | =1 if year = 2020 | +CHF 153M | 0.61 | Excluded — not significant |
+| dummy_succ_2009 | =1 if year = 2009 | — | — | In reserve |
+
+*The non-significant dummy_covid (p=0.61) is itself an important result:
+Geneva experienced no fiscal break in 2020. The diversity of its economic
+fabric — multinationals, international organisations, financial sector —
+absorbed a shock that severely affected other economies.*
+
+*Adding dummy_rffa to a simple regression model raises R² from 0.787 to 0.960 —
+TRAF alone explains a large share of the residual variance.*
+
+---
+
+## 3. Models (script 03)
+
+### The Goal of This Stage
+
+We now have a solid understanding of the data. The objective is not
+to find the perfect model (it does not exist with N=18), but to find
+the most honest model: the one that performs best while being justified
+by what we learned in prior stages.
+
+**Strategy:** build models from simplest to most complex. Each model
+must outperform the previous one to justify its added complexity.
+If a complex model does not improve on a simpler one, we keep the simple
+one — this is the principle of parsimony.
+
+### Step 1 — ARIMA Baseline: The Starting Point
+
+**What an ARIMA model is:**
+ARIMA predicts a future value from three elements: past values of the series,
+past forecast errors, and differencing (which addresses the non-stationarity
+identified in Q1).
+
+The retained model is **ARIMA(0,1,0) with drift** — in plain terms:
+the best forecast for next year is this year's value plus a constant
+annual growth of CHF 194M.
+
+**Performance:** RMSE = CHF 391M | Ljung-Box p = 0.613 ✓
+
+### Step 2 — ETS: An Alternative to ARIMA
+
+**What an ETS model is:**
+ETS directly models the level and trend of the series. The retained
+**ETS(M,N,N)** model with alpha = 0.9999 adheres almost exclusively to
+the last observation — its forecast is simply the last known value, with no trend.
+
+**Performance:** RMSE = CHF 434M — weaker than ARIMA. ARIMA remains the reference.
+
+### Step 3 — ARIMAX: Incorporating What We Know About TRAF
+
+**What an ARIMAX model is:**
+ARIMAX is an ARIMA augmented with external variables. Here we add
+the dummy_rffa identified in Q6. If we know a structural event has occurred,
+it makes sense to include it explicitly in the model.
+
+**Performance:** RMSE = CHF 283M | Ljung-Box p = 0.748 ✓
+
+Adding dummy_rffa reduces the error by **27.7%** relative to ARIMA.
+The coefficient is +CHF 1,398M (p≈0) — from 2022 onwards, revenues are
+on average CHF 1,398M higher than the trend would predict.
+
+**ARIMAX is retained as the reference model.**
+
+### Step 4 — VAR: Capturing Interactions Between Series
+
+A VAR models multiple series simultaneously by capturing their interactions.
+With N=14 effective observations and 3 variables, the model is inevitably
+over-parameterised — no coefficient is significant. It is presented as
+an exploratory model, not as an alternative to ARIMAX.
+
+### Comparison of the Four Models
+
+![Comparison of forecasting models](R/figures/03_comparaison_modeles.png)
+
+| Model | Training RMSE | Ljung-Box p | Status |
+|-------|--------------|-------------|--------|
+| ARIMA(0,1,0) + drift | CHF 391M | 0.613 | Baseline |
+| ETS(M,N,N) | CHF 434M | 0.683 | Weaker than ARIMA |
+| **ARIMAX(0,1,0) + dummy_rffa** | **CHF 283M** | **0.748** | **Retained** |
+| VAR(1) in differences | — | — | Exploratory |
+
+*The Ljung-Box test checks that the model's residuals are white noise —
+i.e., no exploitable information remains in the errors. A p > 0.05
+confirms that the model has captured the data's structure.*
+
+![Retained model residuals (ARIMAX)](R/figures/03_residus_modele_retenu.png)
+
+*Residuals oscillate randomly around zero — the model is well-specified.*
+
+### Forecasts 2025–2027
+
+| Year | Point forecast | 80% CI | 95% CI |
+|------|---------------|--------|--------|
+| 2025 | CHF 9,269M | [8,885 – 9,653] | [8,681 – 9,857] |
+| 2026 | CHF 9,269M | [8,726 – 9,812] | [8,438 – 10,100] |
+| 2027 | CHF 9,269M | [8,604 – 9,934] | [8,251 – 10,287] |
+
+**Why a plateau at CHF 9,269M?**
+The model predicts that the best estimate for each future year is the last
+observed level (2024 = CHF 9,269M). This plateau reflects a post-TRAF
+stabilisation assumption — not a growth trajectory. Confidence intervals
+widen year by year: the further ahead we forecast, the less precise we are.
+
+*Note: ETS and ARIMAX yield the same point forecast (CHF 9,269M) for different
+reasons — ETS through pure inertia, ARIMAX through the model structure
+with a constant dummy. This is not a troubling coincidence, but a convergence
+of two different logics toward the same result.*
+
+---
+
+## 4. SHAP Driver Analysis (script 04)
+
+### The Goal of This Stage
+
+Econometric models tell us **what** revenues will do.
+They do not tell us **why** they move year to year. This section
+answers that question.
+
+**Why a Random Forest?**
+Random Forest is a non-linear model that captures complex interactions
+between variables. Combined with SHAP values, it measures each variable's
+contribution to each individual prediction.
+
+**Important: the Random Forest is used here solely to analyse drivers —
+not to forecast.** Its predictive performance is weaker than ARIMAX,
+and this is expected.
+
+### What Do t-1 and t-2 Mean?
+
+In this analysis, all variables are **lags** — time-shifted values.
+`total_lag1` refers to the previous year's tax revenues (t-1),
+`ben_pm_lag1` to the previous year's corporate income tax, etc.
+
+We use only past variables to predict the current year — this is
+what is meant by avoiding **data leakage**: we do not cheat by using
+information that would not have been available in real conditions.
+
+### What Do SHAP Values Measure?
+
+**SHAP values** measure each variable's contribution to each individual
+prediction, expressed in millions of CHF. A positive SHAP value means
+the variable **pushes revenues upward**. A negative value means it
+**pushes revenues downward**.
+
+![Tax revenue drivers — SHAP analysis](R/figures/04_shap_importance.png)
+
+![SHAP distribution — Top 5 drivers](Python/figures/04_shap_beeswarm_py.png)
+
+*In the beeswarm chart, each point represents one year of observation.
+Red points indicate the variable pushed revenues upward that year.
+Blue points indicate the reverse. (Chart generated via Python/shap — Seaborn rendering.)*
+
+### SHAP Rankings — What They Tell Us
+
+| Rank | Variable | Mean SHAP | Interpretation |
+|------|----------|-----------|----------------|
+| 1 | Tax revenues (t-1) | CHF 120M | Fiscal memory dominates |
+| 2 | Time trend | CHF 112M | Underlying upward force |
+| 3 | Tax revenues (t-2) | CHF 85M | Two-year memory also matters |
+| 4 | DFT share (t-1) | CHF 63M | Indirect signal of large-firm activity |
+| 5 | SARON rate (t-1) | CHF 50M | Economic cycle signal via employment |
+| 6 | Corporate income tax (t-1) | CHF 28M | Direct but less predictable effect |
+| 7 | CPI inflation (t-1) | CHF 5M | Marginal effect |
+| 8 | TRAF effect 2022+ | CHF 0M* | See note below |
+
+*dummy_rffa equals 0 for all training years (2009–2021). The Random Forest
+never observed dummy_rffa = 1 during training — it therefore cannot learn
+its effect. This result is coherent and expected. The TRAF effect is captured
+by ARIMAX (+CHF 1,398M, p≈0), not by the RF.*
+
+*DFT outranks corporate income tax in SHAP importance (CHF 63M vs 28M) because
+DFT indirectly captures the TRAF effect via the federal redistribution of taxes
+on the profits of large Geneva-based firms — it is a more stable signal than
+corporate income tax, which is very volatile year to year.*
+
+![Classic RF importance vs SHAP](R/figures/04_shap_vs_rf_importance.png)
+
+*Both importance methods yield the same ranking — a robustness signal:
+the conclusion does not depend on the chosen method.*
+
+---
+
+## 5. Walk-Forward Validation (script 04b)
+
+### Why This Separate Script — Let's Be Honest
+
+This script was not in the original plan. At the project's end, we realised
+that models had been evaluated solely on their training data — which is
+not a fair validation. A model that predicts well what it has already seen
+is not necessarily good at predicting what it has not seen. This gap was
+corrected with this dedicated script.
+
+### What Is Walk-Forward Validation?
+
+Walk-forward validation simulates exactly the real conditions of model use:
+
+1. Train the model on 2007–2016
+2. Predict 2017 and record the error
+3. Add 2017 to the training data
+4. Predict 2018 and record the error
+5. And so on through 2024
+
+This approach always respects temporal order — we never train on future data.
+It gives an honest picture of each model's actual performance and allows
+a fair comparison between them.
+
+### Predictions vs Actuals — Year by Year
+
+![Walk-forward validation — Comparison of four models](R/figures/04b_walkforward.png)
+
+| Year | Actual | ARIMA | ETS | ARIMAX | RF |
+|------|--------|-------|-----|--------|----|
+| 2017 | CHF 6,641M | 6,590M | 6,496M | n/a† | 6,434M |
+| 2018 | CHF 7,173M | 6,708M | 6,585M | n/a† | 6,499M |
+| 2019 | CHF 7,363M | 7,282M | 7,022M | n/a† | 6,909M |
+| 2020 | CHF 7,454M | 7,479M | 7,350M | n/a† | 6,999M |
+| 2021 | CHF 7,871M | 7,568M | 7,454M | n/a† | 7,078M |
+| 2022 | CHF 9,269M | 8,007M | 7,871M | n/a† | 7,530M |
+| 2023 | CHF 9,734M | 9,489M | 9,269M | 9,269M | 8,555M |
+| 2024 | CHF 9,269M | 9,969M | 9,734M | 9,734M | 9,150M |
+
+†ARIMAX not estimable before 2023: dummy_rffa = 0 across all training data
+AND the test period for 2017–2022 — the model is identical to pure ARIMA.
+
+*This table shows that all major errors concentrate in 2022–2024 —
+the TRAF break was unpredictable for any model that had not seen it
+in training. This is a documented limitation, not a surprise.*
+
+![Walk-forward prediction errors](Python/figures/04b_erreurs_walkforward_py.png)
+
+*The error chart confirms that all major errors concentrate in 2022–2024.
+Over 2017–2021, errors are modest and without systematic bias — a sign
+that models work correctly in normal conditions. (Chart generated via Python —
+a more readable version than the R equivalent.)*
+
+### Walk-Forward RMSE — Fair Comparison
+
+**All years 2017–2024:**
+
+| Model | RMSE | Note |
+|-------|------|------|
+| ARIMAX | CHF 465M | Not estimable before 2023† |
+| ARIMA baseline | CHF 555M | |
+| ETS | CHF 618M | |
+| Random Forest | CHF 864M | |
+
+**Excluding TRAF 2017–2021 — The Most Honest Measure:**
+
+*This window excludes years dominated by the TRAF break. It measures
+the models' actual predictive capabilities in normal conditions,
+without an unforeseeable exogenous shock.*
+
+| Model | RMSE |
+|-------|------|
+| **ARIMA baseline** | **CHF 252M** |
+| ETS | CHF 365M |
+| Random Forest | CHF 555M |
+| ARIMAX | excluded† |
+
+*ARIMA is the best model in normal conditions (CHF 252M ex-TRAF).
+ARIMAX is the best over the full period (CHF 465M), but only because
+it benefits from having seen 2022 in training when predicting 2023–2024.
+These two results are complementary — ARIMAX is retained for 2025–2027
+forecasts because the TRAF break is documented and persistent.*
+
+---
+
+## 6. Bayesian Robustness (script 05)
+
+### Why Go Further After Walk-Forward?
+
+Walk-forward validates models through time. It answers the question:
+"Would these models have been useful if deployed in real conditions?"
+
+Script 05 answers a different question: "Is the TRAF effect of +CHF 1,398M
+estimated by ARIMAX robust to a complete change of statistical paradigm?"
+We triangulate from two independent angles — bootstrap and Bayesian model —
+to ensure the project's key result is not a methodological artefact.
+
+### Bootstrap — Stability of the OLS Estimate
+
+**Why bootstrap?**
+ARIMAX estimates the TRAF effect via maximum likelihood on N=18 observations.
+Bootstrap generates 2,000 samples by resampling and re-estimates the effect
+on each — revealing how much the estimate depends on each individual observation.
+
+We work on **first differences** (stationary I(1) series, confirmed in script 02)
+to respect the series' properties.
+
+**Results:**
+
+![Bootstrap of the TRAF effect — Distribution of 2,000 replications](R/figures/05_bootstrap_rffa.png)
+
+The 95% confidence interval is wide [-CHF 635M ; +CHF 1,294M] — as expected
+with N=17 differences of which only 2–3 post-TRAF observations are available.
+This is not a contradiction of ARIMAX; it is the same uncertainty expressed
+differently. What matters: **76.1% of valid replications indicate a positive effect**,
+with a median of +CHF 335M. The distribution is clearly right-skewed — zero
+sits in the left tail, not at the centre. The direction of the effect is stable;
+it is the exact magnitude that remains uncertain, which is documented
+transparently in the conclusions.
+
+*Note: 79 of the 2,000 replications (4%) were excluded because random resampling
+contained no post-TRAF observation — lm() cannot estimate a coefficient on a
+constant variable. This is an expected consequence of the scarcity of post-TRAF
+observations (2–3 out of 17), not a bootstrap flaw.*
+
+### BSTS — Bayesian Structural Time Series
+
+**What does BSTS add?**
+BSTS treats the revenue trend as a **latent state** that evolves year by year —
+without assuming a fixed functional form a priori. The TRAF dummy's effect
+is estimated jointly with the trend via MCMC.
+
+This is particularly suited to our situation: with N=18, the underlying trend
+is difficult to separate from the TRAF shock via OLS. BSTS does this
+probabilistically, propagating trend uncertainty all the way into the
+coefficient estimate.
+
+**Key result:**
+
+![Bayesian posterior distribution of the TRAF effect](R/figures/05_bsts_posterieur.png)
+
+The Bayesian inclusion probability of the TRAF dummy is **100%** — in
+100% of MCMC iterations, the model judges the variable indispensable for
+explaining the series. The posterior median is **+CHF 1,529M**, very close
+to the ARIMAX estimate (+CHF 1,398M), with a fully positive 95% Bayesian CI
+[+CHF 914M ; +CHF 2,121M] — zero is excluded with total Bayesian certainty.
+On N=18 with a single recent break, this is the strongest result of script 05.
+
+### Synthesis — Convergence of Three Approaches
+
+| Method | Paradigm | TRAF effect estimate |
+|--------|----------|---------------------|
+| ARIMAX (script 03) | Frequentist — maximum likelihood | +CHF 1,398M (p≈0) |
+| Bootstrap OLS (script 05) | Resampling | +CHF 335M (median) — 76.1% positive replications |
+| BSTS (script 05) | Bayesian — MCMC | +CHF 1,529M (median) — 95% CI [+914M ; +2,121M] |
+
+*All three methods converge on the direction of the effect. Differences in
+magnitude are expected: they operate on different transformations of the series
+(levels vs first differences) and make different assumptions about the underlying
+trend. BSTS, which estimates the effect directly on levels by modelling the trend
+as a latent state, converges at +CHF 1,529M — nearly identical to ARIMAX
+(+CHF 1,398M). Directional convergence and the agreement between the two
+level-based estimates constitute the most important robustness signal.*
+
+---
+
+## What This Project Teaches Us
+
+Six conclusions emerge from the full analysis.
+
+**1. Geneva's fiscal growth is driven by corporates, not households.**
+Corporate income tax grows at +3.97%/year and DFT at +5.18%/year over 2007–2024.
+Personal income tax declines nominally. Geneva is structurally dependent
+on the profit cycles of its large firms.
+
+**2. TRAF represents a +CHF 1,398M shock to annual revenues.**
+Estimated via ARIMAX (p≈0) and confirmed by two independent methods:
+the Bayesian BSTS converges at +CHF 1,529M (95% CI [+914M ; +2,121M], 100%
+inclusion probability), and the bootstrap shows 76.1% positive replications.
+This figure is a global estimate — it cannot be decomposed between pure TRAF
+effect, post-COVID economic cycle and sectoral effects without disaggregated
+data that are not publicly available.
+
+**3. Wealth tax is a statistical trap.**
+A 0.86 correlation with total revenues in levels → 0.05 in first differences.
+The relationship is entirely spurious — driven by common upward trends.
+Including it as a regressor without this test would have produced a misleading model.
+
+**4. Geneva weathered COVID without a fiscal break.**
+dummy_covid is not significant (p=0.61). The resilience of Geneva's economic
+fabric — multinationals, international organisations, finance — absorbed
+a shock that severely affected other economies.
+
+**5. Fiscal memory dominates annual variation.**
+Previous year revenues (SHAP = CHF 120M) and the year before that (CHF 85M)
+are the top identified drivers. Geneva's revenues primarily follow their own
+inertia — which makes ARIMA(0,1,0) particularly well-suited as a baseline.
+
+**6. SARON is an economic cycle signal, not a direct cause.**
+The SARON/revenues correlation works through the employment cycle: a growing
+economy creates jobs, broadens the taxable wage base and increases corporate
+profits — which translate into tax revenues. SARON rises when the SNB judges
+the economy is overheating, not the reverse.
+
+---
+
+## Limitations
+
+This project documents its limitations explicitly —
+methodological honesty is a requirement, not an option.
+
+**Sample size (N=18)**
+This is the primary limitation. With 18 annual observations, the statistical
+power of tests is low. A test that "does not reject" does not prove the absence
+of a phenomenon — it simply lacks the power to detect it. This is why we
+systematically triangulate across multiple tests. The bootstrap (script 05)
+concretely illustrates this constraint: the 95% CI is wide not because the
+effect is absent, but because with N=17 differences of which only 2–3 are
+post-TRAF, the estimate cannot be precise.
+
+**Annual data only**
+A constraint imposed by the OCSTAT source. Quarterly data would multiply N by 4
+and make all tests considerably more robust.
+
+**TRAF effect not decomposed**
+dummy_rffa captures a global effect of +CHF 1,398M. Decomposing between pure
+TRAF effect, post-COVID cycle and sectoral effects would require disaggregated
+data by taxpayer type — not publicly available.
+
+**Unstable SHAP values**
+N=13 training observations for the Random Forest. SHAP values are directional
+indicators, not precise measures.
+
+**TRAF persistence assumption**
+Forecasts for 2025–2027 assume the TRAF effect persists (dummy=1). If large-firm
+profits normalise — as the 2024 decline suggests — revenues could revert toward
+the pre-TRAF trend more quickly than forecast.
+
+**GDP available only through 2022**
+FSO regional accounts are published with a 2–3 year lag. Geneva GDP is not used
+as a forecasting regressor for this reason.
+
+---
+
+## Possible Improvements
+
+### With New Data
+- **Quarterly data** (internal FTA/SCC): multiply N by 4
+- **Multi-cantonal panel model** (GE, ZH, VD, BS): isolate Geneva-specific effects
+- **EUR/CHF, USD/CHF exchange rates**: capture international exposure
+- **Cantonal wage bill** (FSO): improve PIT modelling
+- **Disaggregated taxpayer data** (FTA): decompose the TRAF effect
+
+### With Current Data
+- **Interactive plotly charts** for GitHub Pages
+- **Bootstrap forecast intervals**: extend script 05 to produce 2025–2027
+  CI by resampling (complement to ARIMAX analytical CIs)
+
+### Long-Term Perspectives
+- **Prophet**: relevant if monthly data become available
+- **LSTM**: requires several hundred observations
+- **Extended BSTS**: add a regression component with GDP and macro variables
+  once FSO 2023–2024 data are available
+
+---
+
+## Reproducibility
+
+```r
+setwd("your/working/directory")
+source("R/scripts/01_exploration.R")
+source("R/scripts/02_tests.R")
+source("R/scripts/03_modeles.R")
+source("R/scripts/04_shap.R")
+source("R/scripts/04b_walkforward.R")
+source("R/scripts/05_robustesse_BSTS.R")  # Requires script 01 to be in memory
+```
+
+**Required R packages:**
+```r
+install.packages(c("tidyverse", "tseries", "urca", "strucchange",
+                   "forecast", "vars", "randomForest", "fastshap",
+                   "ggplot2", "patchwork", "scales",
+                   "bsts", "boot"))   # bsts and boot for script 05
+```
+
+**Python pipeline (Jupyter notebooks):**
+```bash
+# Environment: Miniconda, env fiscal_ge, Python 3.11
+conda activate fiscal_ge
+jupyter notebook
+# Run in order: 01 → 02 → 03 → 04 → 04b
+```
+
+`set.seed(42)` in all blocks with a random component.
+
+---
+
+## Contact
+
+**Frat DAG**  
+Email: fratdag@gmail.com  
+LinkedIn: https://www.linkedin.com/in/fratdag/
