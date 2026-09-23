@@ -543,8 +543,8 @@ cat("Bénéfice PM 2023 :", df$ben_pm[df$annee == 2023],
     round(median(df$ben_pm), 0), "M)\n")
 
 # Sauvegarde des graphiques
-ggsave("01_total_evolution.png",     g1,    width = 12, height = 6, dpi = 150)
-ggsave("01_decomposition.png",       g2,    width = 12, height = 6, dpi = 150)
+ggsave(file.path("R", "figures", "01_total_evolution.png"),     g1,    width = 12, height = 6, dpi = 150)
+ggsave(file.path("R", "figures", "01_decomposition.png"),       g2,    width = 12, height = 6, dpi = 150)
 
 cat("\n✓ Graphiques sauvegardés\n")
 

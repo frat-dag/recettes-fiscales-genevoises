@@ -332,7 +332,7 @@ g_shap_imp <- ggplot(shap_imp_df,
         plot.subtitle = element_text(size = 9, color = "grey40"))
 
 print(g_shap_imp)
-ggsave("04_shap_importance.png", g_shap_imp,
+ggsave(file.path("R", "figures", "04_shap_importance.png"), g_shap_imp,
        width = 11, height = 7, dpi = 150)
 
 # --- Graphique 2 : SHAP beeswarm top 5 ---
@@ -387,7 +387,7 @@ g_shap_bee <- ggplot(shap_long_top5,
   )
 
 print(g_shap_bee)
-ggsave("04_shap_beeswarm.png", g_shap_bee,
+ggsave(file.path("R", "figures", "04_shap_beeswarm.png"), g_shap_bee,
        width = 11, height = 6, dpi = 150)
 
 # --- Graphique 3 : Importance RF classique vs SHAP ---
@@ -430,7 +430,7 @@ g_comp_imp <- imp_rf_df %>%
   )
 
 print(g_comp_imp)
-ggsave("04_shap_vs_rf_importance.png", g_comp_imp,
+ggsave(file.path("R", "figures", "04_shap_vs_rf_importance.png"), g_comp_imp,
        width = 13, height = 6, dpi = 150)
 
 # =============================================================================

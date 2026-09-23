@@ -437,30 +437,45 @@ df_hist <- tibble(
   type   = "Historique"
 )
 
+# Point de connexion : dernière valeur réalisée (2024)
+# ajouté à chaque modèle pour connecter historique et prévisions
+derniere_obs <- tibble(
+  annee  = 2024,
+  valeur = df$total[df$annee == 2024]
+)
+
 df_prev_graph <- bind_rows(
-  tibble(annee  = 2025:2027,
-         valeur = as.numeric(prev_arima_base$mean),
-         type   = "ARIMA baseline"),
-  tibble(annee  = 2025:2027,
-         valeur = as.numeric(prev_ets$mean),
-         type   = "ETS"),
-  tibble(annee  = 2025:2027,
-         valeur = as.numeric(prev_arimax$mean),
-         type   = "ARIMAX"),
-  tibble(annee  = 2025:2027,
-         valeur = niveaux_var,
-         type   = "VAR(1)")
+  bind_rows(derniere_obs %>% mutate(type = "ARIMA baseline"),
+            tibble(annee  = 2025:2027,
+                   valeur = as.numeric(prev_arima_base$mean),
+                   type   = "ARIMA baseline")),
+  bind_rows(derniere_obs %>% mutate(type = "ETS"),
+            tibble(annee  = 2025:2027,
+                   valeur = as.numeric(prev_ets$mean),
+                   type   = "ETS")),
+  bind_rows(derniere_obs %>% mutate(type = "ARIMAX"),
+            tibble(annee  = 2025:2027,
+                   valeur = as.numeric(prev_arimax$mean),
+                   type   = "ARIMAX")),
+  bind_rows(derniere_obs %>% mutate(type = "VAR(1)"),
+            tibble(annee  = 2025:2027,
+                   valeur = niveaux_var,
+                   type   = "VAR(1)"))
 )
 
 df_graph <- bind_rows(df_hist, df_prev_graph)
 
 # Intervalles de confiance ARIMAX (modèle retenu)
+# Point de connexion pour les intervalles de confiance
+# En 2024, la valeur réalisée = point unique, IC réduit à zéro
+valeur_2024 <- df$total[df$annee == 2024]
+
 df_ic <- tibble(
-  annee = 2025:2027,
-  lo95  = as.numeric(prev_arimax$lower[, 2]),
-  hi95  = as.numeric(prev_arimax$upper[, 2]),
-  lo80  = as.numeric(prev_arimax$lower[, 1]),
-  hi80  = as.numeric(prev_arimax$upper[, 1])
+  annee = c(2024, 2025:2027),
+  lo95  = c(valeur_2024, as.numeric(prev_arimax$lower[, 2])),
+  hi95  = c(valeur_2024, as.numeric(prev_arimax$upper[, 2])),
+  lo80  = c(valeur_2024, as.numeric(prev_arimax$lower[, 1])),
+  hi80  = c(valeur_2024, as.numeric(prev_arimax$upper[, 1]))
 )
 
 g_prev <- ggplot() +
@@ -517,10 +532,13 @@ g_prev <- ggplot() +
   )
 
 print(g_prev)
-ggsave("03_comparaison_modeles.png",
+ggsave(file.path("R", "figures", "03_comparaison_modeles.png"),
        g_prev, width = 13, height = 7, dpi = 150)
 
 # Graphique diagnostic résidus — modèle retenu
+png(file.path("R", "figures", "03_residus_modele_retenu.png"),
+    width = 10, height = 8, units = "in", res = 150)
+
 par(mfrow = c(2, 2))
 if (modele_final_eco == "ARIMAX") {
   plot(residuals(arima_x),
@@ -543,11 +561,10 @@ if (modele_final_eco == "ARIMAX") {
 }
 par(mfrow = c(1, 1))
 
-ggsave("03_residus_modele_retenu.png",
-       width = 10, height = 8, dpi = 150)
+dev.off()
 
 cat("\n✓ Étape 3 terminée.\n")
 cat("Modèle économétrique retenu :", modele_final_eco, "\n")
 cat("RMSE :", round(rmse_final_eco, 0), "M CHF\n")
 cat("Graphiques sauvegardés.\n")
-cat("→ Prochaine étape : analyse SHAP des drivers (script 04)\n")
+cat("→ Prochaine étape : analyse SHAP des drivers (script 04)\n")

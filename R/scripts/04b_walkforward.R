@@ -379,7 +379,7 @@ g_wf <- ggplot() +
   )
 
 print(g_wf)
-ggsave("04b_walkforward.png", g_wf,
+ggsave(file.path("R", "figures", "04b_walkforward.png"), g_wf,
        width = 13, height = 7, dpi = 150)
 
 # Graphique erreurs par modèle et par année
@@ -423,7 +423,7 @@ g_err <- ggplot(df_err, aes(x = annee, y = erreur / 1000,
   )
 
 print(g_err)
-ggsave("04b_erreurs_walkforward.png", g_err,
+ggsave(file.path("R", "figures", "04b_erreurs_walkforward.png"), g_err,
        width = 13, height = 6, dpi = 150)
 
 cat("\n✓ Script 04b terminé.\n")

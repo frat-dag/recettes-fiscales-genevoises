@@ -361,7 +361,7 @@ plots_dif <- imap(ts_pour_graphique, function(serie, nom) {
     theme    = theme(plot.title = element_text(face = "bold"))
   )
 
-ggsave("02_stationnarite_visuelle.png",
+ggsave(file.path("R", "figures", "02_stationnarite_visuelle.png"),
        width = 13, height = 12, dpi = 150)
 
 # =============================================================================
