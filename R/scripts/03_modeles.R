@@ -92,7 +92,7 @@ ts_total <- ts(df$total, start = 2007, frequency = 1)
 # =============================================================================
 
 cat("=============================================================\n")
-cat("ÉTAPE 1 — ARIMA BASELINE\n")
+cat("ÉTAPE 1 : ARIMA BASELINE\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : établir le modèle de référence le plus simple.\n")
@@ -115,7 +115,7 @@ lb_base <- Box.test(residuals(arima_base), lag = 5, type = "Ljung-Box")
 cat("Ljung-Box p =", round(lb_base$p.value, 3),
     ifelse(lb_base$p.value > 0.05,
            "→ résidus non autocorrélés ✓",
-           "→ autocorrélation résiduelle — modèle à revoir"),
+           "→ autocorrélation résiduelle : modèle à revoir"),
     "\n")
 
 # RMSE en training
@@ -124,12 +124,12 @@ cat("RMSE training :", round(rmse_arima_base, 0), "M CHF\n")
 
 # Prévisions ARIMA baseline — horizon 3 ans
 prev_arima_base <- forecast(arima_base, h = 3)
-cat("\nPrévisions ARIMA baseline 2025–2027 :\n")
+cat("\nPrévisions ARIMA baseline 2025-2027 :\n")
 print(prev_arima_base)
 
 cat("\n# DÉCISION ÉTAPE 1 :\n")
 cat("# Modèle retenu :", arima_base$arma, "\n")
-cat("# RMSE =", round(rmse_arima_base, 0), "M CHF — référence à battre\n")
+cat("# RMSE =", round(rmse_arima_base, 0), "M CHF : référence à battre\n")
 cat("# Ljung-Box p =", round(lb_base$p.value, 3), "\n")
 cat("# → Ce RMSE et ces prévisions sont la baseline.\n")
 cat("# → L'Étape 2 (ETS) doit produire un RMSE inférieur pour justifier\n")
@@ -151,7 +151,7 @@ cat("#   sa complexité supplémentaire.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("ÉTAPE 2 — MODÈLE ETS\n")
+cat("ÉTAPE 2 : MODÈLE ETS\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : alternative à ARIMA ne nécessitant pas de stationnarité.\n")
@@ -175,7 +175,7 @@ cat("RMSE training :", round(rmse_ets, 0), "M CHF\n")
 
 # Prévisions ETS
 prev_ets <- forecast(ets_model, h = 3)
-cat("\nPrévisions ETS 2025–2027 :\n")
+cat("\nPrévisions ETS 2025-2027 :\n")
 print(prev_ets)
 
 # Comparaison ARIMA vs ETS
@@ -232,11 +232,11 @@ if (rmse_ets < rmse_arima_base) {
 # =============================================================================
 
 cat("=============================================================\n")
-cat("ÉTAPE 3 — ARIMAX (ARIMA + dummy_rffa)\n")
+cat("ÉTAPE 3 : ARIMAX (ARIMA + dummy_rffa)\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : tester si l'ajout de dummy_rffa améliore le modèle\n")
-cat("de référence. dummy_rffa est exogène — pas de risque de circularité.\n")
+cat("de référence. dummy_rffa est exogène : pas de risque de circularité.\n")
 cat("Référence actuelle :", nom_ref, "| RMSE =",
     round(rmse_ref, 0), "M CHF\n\n")
 
@@ -277,7 +277,7 @@ xreg_prev <- matrix(rep(1, 3), ncol = 1,
                     dimnames = list(NULL, "dummy_rffa"))
 
 prev_arimax <- forecast(arima_x, h = 3, xreg = xreg_prev)
-cat("\nPrévisions ARIMAX 2025–2027 :\n")
+cat("\nPrévisions ARIMAX 2025-2027 :\n")
 print(prev_arimax)
 
 cat("\n# DÉCISION ÉTAPE 3 :\n")
@@ -321,11 +321,11 @@ if (rmse_arimax < rmse_ref) {
 # =============================================================================
 
 cat("=============================================================\n")
-cat("ÉTAPE 4 — VAR EN DIFFÉRENCES\n")
+cat("ÉTAPE 4 : VAR EN DIFFÉRENCES\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : capturer les interactions entre séries fiscales et macro.\n")
-cat("VAR en différences (pas VECM) — décision Q4 script 02.\n")
+cat("VAR en différences (pas VECM) : décision Q4 script 02.\n")
 cat("Variables : d_total, d_ben_pm, d_saron\n\n")
 
 # Préparation données VAR
@@ -342,7 +342,7 @@ df_var <- df %>%
 
 cat("Dimensions VAR :", nrow(df_var), "obs ×",
     ncol(df_var) - 1, "variables\n")
-cat("Période :", min(df_var$annee), "–", max(df_var$annee), "\n\n")
+cat("Période :", min(df_var$annee), "-", max(df_var$annee), "\n\n")
 
 ts_var <- ts(df_var %>% dplyr::select(-annee),
              start = 2009, frequency = 1)
@@ -368,7 +368,7 @@ port_test <- serial.test(var_model, lags.pt = 5,
 print(port_test)
 
 # Prévisions VAR
-cat("\n--- Prévisions VAR 2025–2027 (différences) ---\n")
+cat("\n--- Prévisions VAR 2025-2027 (différences) ---\n")
 prev_var_diff <- predict(var_model, n.ahead = 3)
 
 # Reconstitution des niveaux
@@ -376,13 +376,13 @@ derniere_val <- df$total[df$annee == 2022]
 diff_prevues <- prev_var_diff$fcst$d_total[, "fcst"]
 niveaux_var  <- cumsum(c(derniere_val, diff_prevues))[-1]
 
-cat("Prévisions VAR — niveaux reconstitués (M CHF) :\n")
+cat("Prévisions VAR : niveaux reconstitués (M CHF) :\n")
 cat("2025 :", round(niveaux_var[1]), "M\n")
 cat("2026 :", round(niveaux_var[2]), "M\n")
 cat("2027 :", round(niveaux_var[3]), "M\n")
 
 cat("\n# DÉCISION ÉTAPE 4 :\n")
-cat("# VAR(1) sur N=14 — surparamétrage inévitable.\n")
+cat("# VAR(1) sur N=14 : surparamétrage inévitable.\n")
 cat("# Aucun coefficient n'est attendu comme fortement significatif.\n")
 cat("# Le VAR est présenté comme modèle exploratoire complémentaire,\n")
 cat("# pas comme modèle de référence.\n")
@@ -393,7 +393,7 @@ cat("# → Le modèle économétrique retenu reste :", modele_final_eco, "\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("SYNTHÈSE — COMPARAISON DES QUATRE MODÈLES\n")
+cat("SYNTHÈSE : COMPARAISON DES QUATRE MODÈLES\n")
 cat("=============================================================\n\n")
 
 comparaison <- tibble(
@@ -516,14 +516,14 @@ g_prev <- ggplot() +
            label = "Horizon\nprévision", size = 3,
            color = "grey50", hjust = 0) +
   labs(
-    title    = "Comparaison des modèles de prévision — Total recettes GE",
-    subtitle = paste0("ARIMA, ETS, ARIMAX et VAR(1) | 2025–2027\n",
+    title    = "Comparaison des modèles de prévision : Total recettes GE",
+    subtitle = paste0("ARIMA, ETS, ARIMAX et VAR(1) | 2025-2027\n",
                       "Zone grisée : intervalles de confiance ARIMAX ",
                       "(80% et 95%)"),
     x = NULL, y = NULL,
     color    = NULL,
     caption  = paste0("Source : OCSTAT T18.02.1.15 | ",
-                      "Modèle retenu : ", modele_final_eco)
+                      "Scénarios : plateau (ARIMAX) et tendance (ARIMA avec dérive)")
   ) +
   theme_minimal(base_size = 11) +
   theme(
@@ -542,7 +542,7 @@ png(file.path("R", "figures", "03_residus_modele_retenu.png"),
 par(mfrow = c(2, 2))
 if (modele_final_eco == "ARIMAX") {
   plot(residuals(arima_x),
-       main = paste("Résidus —", modele_final_eco),
+       main = paste("Résidus :", modele_final_eco),
        col = couleurs[3])
   abline(h = 0, lty = 2, col = "grey50")
   acf(residuals(arima_x),  main = "ACF des résidus")
@@ -551,7 +551,7 @@ if (modele_final_eco == "ARIMAX") {
   qqline(residuals(arima_x), col = couleurs[2])
 } else {
   plot(residuals(arima_base),
-       main = paste("Résidus —", modele_final_eco),
+       main = paste("Résidus :", modele_final_eco),
        col = couleurs[1])
   abline(h = 0, lty = 2, col = "grey50")
   acf(residuals(arima_base),  main = "ACF des résidus")

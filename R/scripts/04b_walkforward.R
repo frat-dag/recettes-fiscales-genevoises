@@ -45,8 +45,8 @@ couleurs <- c("#2C3E50", "#E74C3C", "#2980B9", "#27AE60", "#F39C12")
 # Années de test
 annees_test <- 2017:2024
 cat("Fenêtre walk-forward :\n")
-cat("  Entraînement minimum : 2007–2016 (10 obs)\n")
-cat("  Test                 : 2017–2024 (8 obs)\n\n")
+cat("  Entraînement minimum : 2007-2016 (10 obs)\n")
+cat("  Test                 : 2017-2024 (8 obs)\n\n")
 
 # =============================================================================
 # BOUCLE WALK-FORWARD
@@ -87,7 +87,7 @@ df_ml_wf <- df %>%
                                       all_of(features_rf))))
 
 cat("Dataset ML walk-forward :", nrow(df_ml_wf), "observations\n")
-cat("Période :", min(df_ml_wf$annee), "–",
+cat("Période :", min(df_ml_wf$annee), "-",
     max(df_ml_wf$annee), "\n\n")
 
 cat("Lancement de la boucle walk-forward...\n\n")
@@ -95,7 +95,7 @@ cat("Lancement de la boucle walk-forward...\n\n")
 for (an in annees_test) {
   
   cat("→ Prédiction", an,
-      "| Entraînement 2007–", an - 1, "\n")
+      "| Entraînement 2007-", an - 1, "\n")
   
   # Données d'entraînement
   df_train <- df %>% filter(annee < an)
@@ -193,7 +193,7 @@ for (an in annees_test) {
 # =============================================================================
 
 cat("\n=============================================================\n")
-cat("TABLEAU WALK-FORWARD — PRÉDICTIONS VS RÉALISATIONS\n")
+cat("TABLEAU WALK-FORWARD : PRÉDICTIONS VS RÉALISATIONS\n")
 cat("=============================================================\n\n")
 
 tableau_wf <- resultats_wf %>%
@@ -222,14 +222,14 @@ print(tableau_wf %>%
 # =============================================================================
 
 cat("\n=============================================================\n")
-cat("RMSE WALK-FORWARD — COMPARAISON DES MODÈLES\n")
+cat("RMSE WALK-FORWARD : COMPARAISON DES MODÈLES\n")
 cat("=============================================================\n\n")
 
 cat("NOTE SUR ARIMAX :\n")
 cat("ARIMAX n'est estimable en walk-forward qu'à partir de 2023.\n")
-cat("Avant 2022, dummy_rffa = 0 sur tout l'entraînement ET le test —\n")
+cat("Avant 2022, dummy_rffa = 0 sur tout l'entraînement ET le test : \n")
 cat("le modèle est identique à ARIMA pur. Il n'est donc pas comparable\n")
-cat("sur la période 2017–2021 et est exclu du RMSE hors RFFA.\n\n")
+cat("sur la période 2017-2021 et est exclu du RMSE hors RFFA.\n\n")
 
 rmse_wf_comp <- tibble(
   Modele      = c("ARIMA baseline", "ETS",
@@ -255,7 +255,7 @@ rmse_wf_comp <- tibble(
                  pull(pred_ets) - resultats_wf %>%
                  filter(annee < 2022) %>%
                  pull(realise))^2, na.rm = TRUE)),
-    NA_real_,   # ARIMAX non estimable avant 2022 — voir note ci-dessus
+    NA_real_,   # ARIMAX non estimable avant 2022 : voir note ci-dessus
     sqrt(mean((resultats_wf %>%
                  filter(annee < 2022) %>%
                  pull(pred_rf) - resultats_wf %>%
@@ -270,11 +270,11 @@ rmse_wf_comp <- tibble(
   ) %>%
   arrange(RMSE_wf_total)
 
-cat("RMSE walk-forward — toutes années (2017–2024) :\n")
+cat("RMSE walk-forward : toutes années (2017-2024) :\n")
 print(rmse_wf_comp %>% dplyr::select(Modele, RMSE_wf_total, Note))
 
-cat("\nRMSE walk-forward — hors RFFA (2017–2021) :\n")
-cat("(période sans rupture structurelle — comparaison la plus équitable)\n")
+cat("\nRMSE walk-forward : hors RFFA (2017-2021) :\n")
+cat("(période sans rupture structurelle : comparaison la plus équitable)\n")
 cat("ARIMAX exclu : non estimable sur cette fenêtre.\n\n")
 print(rmse_wf_comp %>%
         filter(Modele != "ARIMAX (+dummy_rffa)") %>%
@@ -287,7 +287,7 @@ cat("# Modèle le plus performant toutes années : ARIMAX (465M)\n")
 cat("# Ces deux résultats sont cohérents et complémentaires :\n")
 cat("# ARIMA est le meilleur modèle en conditions normales.\n")
 cat("# ARIMAX capture mieux les ruptures structurelles connues.\n")
-cat("# → ARIMAX reste le modèle retenu pour les prévisions 2025–2027\n")
+cat("# → ARIMAX reste le modèle retenu pour les prévisions 2025-2027\n")
 cat("#   car la rupture RFFA est documentée et persistante.\n\n")
 
 # =============================================================================
@@ -353,22 +353,22 @@ g_wf <- ggplot() +
            label = "Début\ntest", size = 2.8,
            color = "grey50", hjust = 0) +
   annotate("text", x = 2021.7, y = 6.1,
-           label = "RFFA\n2022+", size = 2.8,
+           label = "Rupture\n2022", size = 2.8,
            color = couleurs[2], hjust = 0) +
   labs(
-    title    = "Validation walk-forward — Comparaison des quatre modèles",
+    title    = "Validation walk-forward : Comparaison des quatre modèles",
     subtitle = paste0(
       "Entraînement sur 2007:(t-1) | Prédiction de t | ",
-      "Fenêtre de test : 2017–2024\n",
+      "Fenêtre de test : 2017-2024\n",
       "Cercles vides = valeurs réalisées | ",
-      "ARIMAX : 2 points seulement (2023–2024) — ",
+      "ARIMAX : 2 points seulement (2023-2024) : ",
       "non estimable avant 2022"
     ),
     x = NULL, y = NULL,
     color    = NULL,
     caption  = paste0(
       "Source : OCSTAT T18.02.1.15 | ",
-      "RMSE walk-forward hors RFFA : ARIMA=252M, ETS=365M, RF=555M"
+      "RMSE walk-forward 2017-2021 : ARIMA=252M, ETS=365M, RF=555M"
     )
   ) +
   theme_minimal(base_size = 11) +

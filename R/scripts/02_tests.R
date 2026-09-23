@@ -62,7 +62,7 @@ couleurs <- c("#2C3E50", "#E74C3C", "#2980B9", "#27AE60", "#F39C12")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q7 — RUPTURE DE NOMENCLATURE DANS L'IR\n")
+cat("Q7 : RUPTURE DE NOMENCLATURE DANS L'IR\n")
 cat("=============================================================\n\n")
 
 df <- df %>%
@@ -74,19 +74,19 @@ df <- df %>%
                         ir + source_imp, ir)
   )
 
-cat("IR seul 2007–2011 (moyenne)      :",
+cat("IR seul 2007-2011 (moyenne)      :",
     round(mean(df$ir[df$annee <= 2011]), 0), "M\n")
-cat("IR seul 2012–2024 (moyenne)      :",
+cat("IR seul 2012-2024 (moyenne)      :",
     round(mean(df$ir[df$annee >= 2012]), 0), "M\n")
-cat("IR corrigé 2012–2024 (moyenne)   :",
+cat("IR corrigé 2012-2024 (moyenne)   :",
     round(mean(df$ir_corrige[df$annee >= 2012],
                na.rm = TRUE), 0), "M\n")
-cat("PP total 2007–2024 (moyenne)     :",
+cat("PP total 2007-2024 (moyenne)     :",
     round(mean(df$pp_total), 0), "M\n\n")
 
 cat("# DÉCISION Q7 :\n")
 cat("# La baisse de l'IR est un artefact de nomenclature OCSTAT 2012.\n")
-cat("# On utilise pp_total comme proxy cohérent sur 2007–2024.\n")
+cat("# On utilise pp_total comme proxy cohérent sur 2007-2024.\n")
 cat("# L'IR corrigé (IR + source) sera testé en sensibilité (script 03).\n")
 cat("# → Cette décision est prise AVANT les tests de stationnarité.\n\n")
 
@@ -110,7 +110,7 @@ cat("# → Cette décision est prise AVANT les tests de stationnarité.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q1 — TESTS DE STATIONNARITÉ (ADF + PP)\n")
+cat("Q1 : TESTS DE STATIONNARITÉ (ADF + PP)\n")
 cat("=============================================================\n\n")
 
 cat("⚠️  LIMITE : N=18 → puissance faible. Les tests sont des guides,\n")
@@ -150,8 +150,8 @@ tester_stationnarite <- function(serie, nom) {
   I1 <- adf_niv$p.value > 0.05 & adf_diff$p.value < 0.05
   cat("→ DÉCISION :",
       ifelse(I1,
-             "I(1) — différenciation requise",
-             "Ambigu — voir inspection visuelle"),
+             "I(1) : différenciation requise",
+             "Ambigu : voir inspection visuelle"),
       "\n\n")
   
   list(serie      = nom,
@@ -166,7 +166,7 @@ resultats_station <- map(names(series_list),
                          ~tester_stationnarite(series_list[[.x]], .x))
 tableau_station   <- map_dfr(resultats_station, ~as_tibble(.x))
 
-cat("=== TABLEAU DE SYNTHÈSE — STATIONNARITÉ ADF/PP ===\n")
+cat("=== TABLEAU DE SYNTHÈSE : STATIONNARITÉ ADF/PP ===\n")
 print(tableau_station)
 
 cat("\n# DÉCISION Q1 :\n")
@@ -189,7 +189,7 @@ cat("# → Cette conclusion motive Q4 : si I(1), tester la cointégration.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q1A — COMPLÉMENT : TEST KPSS\n")
+cat("Q1A : COMPLÉMENT : TEST KPSS\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : ADF et PP testent H0=non stationnaire. Le KPSS teste\n")
@@ -240,14 +240,14 @@ triangulation <- tableau_station %>%
   mutate(
     conclusion_finale = case_when(
       decision == "I(1)" & kpss_niv_dec == "Non stat" &
-        kpss_diff_dec == "Stat"     ~ "I(1) — confirmé trois tests",
+        kpss_diff_dec == "Stat"     ~ "I(1) : confirmé trois tests",
       decision == "I(1)" & kpss_niv_dec == "Non stat" &
-        kpss_diff_dec == "Non stat" ~ "I(1) — ADF/PP confirment, KPSS ambigu",
+        kpss_diff_dec == "Non stat" ~ "I(1) : ADF/PP confirment, KPSS ambigu",
       decision == "Ambigu" & kpss_niv_dec == "Non stat" &
-        kpss_diff_dec == "Stat"     ~ "I(1) — KPSS confirme malgré ADF ambigu",
+        kpss_diff_dec == "Stat"     ~ "I(1) : KPSS confirme malgré ADF ambigu",
       decision == "Ambigu" & kpss_niv_dec == "Non stat" &
-        kpss_diff_dec == "Non stat" ~ "Indéterminé — manque de puissance (N=18)",
-      TRUE ~ "Cas particulier — voir inspection visuelle"
+        kpss_diff_dec == "Non stat" ~ "Indéterminé : manque de puissance (N=18)",
+      TRUE ~ "Cas particulier : voir inspection visuelle"
     )
   ) %>%
   dplyr::select(serie, decision, kpss_niv_dec, kpss_diff_dec,
@@ -279,7 +279,7 @@ cat("# reprises dans la synthèse finale de ce script.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q1B — COMPLÉMENT : TEST DE ZIVOT-ANDREWS\n")
+cat("Q1B : COMPLÉMENT : TEST DE ZIVOT-ANDREWS\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : contrairement au test de Chow (date fixée a priori),\n")
@@ -331,7 +331,7 @@ plots_niv <- imap(ts_pour_graphique, function(serie, nom) {
     geom_point(size = 1.5,
                color = couleurs[[which(names(ts_pour_graphique) == nom)]]) +
     scale_y_continuous(labels = label_number(suffix = " M")) +
-    labs(title = paste(nom, "— Niveau"), x = NULL, y = NULL) +
+    labs(title = paste(nom, ": Niveau"), x = NULL, y = NULL) +
     theme_minimal(base_size = 9) +
     theme(plot.title = element_text(face = "bold", size = 9))
 })
@@ -345,7 +345,7 @@ plots_dif <- imap(ts_pour_graphique, function(serie, nom) {
     geom_point(size = 1.5,
                color = couleurs[[which(names(ts_pour_graphique) == nom)]]) +
     geom_hline(yintercept = 0, color = "grey50", linetype = "dotted") +
-    labs(title = paste(nom, "— Diff. 1ère"), x = NULL, y = NULL) +
+    labs(title = paste(nom, ": Diff. 1ère"), x = NULL, y = NULL) +
     theme_minimal(base_size = 9) +
     theme(plot.title = element_text(face = "bold", size = 9))
 })
@@ -355,7 +355,7 @@ plots_dif <- imap(ts_pour_graphique, function(serie, nom) {
   (plots_niv[[3]] + plots_dif[[3]]) /
   (plots_niv[[4]] + plots_dif[[4]]) +
   plot_annotation(
-    title    = "Séries fiscales — Niveau et différence première",
+    title    = "Séries fiscales : Niveau et différence première",
     subtitle = "Validation visuelle de la stationnarité après différenciation",
     caption  = "Source : OCSTAT T18.02.1.15",
     theme    = theme(plot.title = element_text(face = "bold"))
@@ -383,7 +383,7 @@ ggsave(file.path("R", "figures", "02_stationnarite_visuelle.png"),
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q2 — TEST DE CHOW — RUPTURES STRUCTURELLES\n")
+cat("Q2 : TEST DE CHOW : RUPTURES STRUCTURELLES\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : valider formellement les ruptures visuelles du script 01.\n")
@@ -422,14 +422,14 @@ for (an in c(2010, 2020)) {
 
 # 2022 : non testable par Chow — N post-rupture insuffisant
 cat("Rupture 2022 : test de Chow inadmissible\n")
-cat("  → N post-rupture = 3 observations (2022–2024) — insuffisant\n")
+cat("  → N post-rupture = 3 observations (2022-2024) : insuffisant\n")
 cat("  → Rupture traitée via dummy_rffa en Q6\n\n")
 
 resultats_chow <- resultats_chow %>%
   add_row(annee_rupture = 2022,
           F_stat        = NA,
           p_value       = NA,
-          conclusion    = "Non testable — dummy_rffa en Q6")
+          conclusion    = "Non testable : dummy_rffa en Q6")
 
 cat("=== TABLEAU CHOW ===\n")
 print(resultats_chow)
@@ -437,7 +437,7 @@ print(resultats_chow)
 cat("\n# DÉCISION Q2 :\n")
 cat("# 2010 et 2020 : ruptures confirmées statistiquement.\n")
 cat("# 2022 : non testable par Chow (N trop faible post-rupture).\n")
-cat("#         Traitée via dummy_rffa en Q6 — approche défendable.\n")
+cat("#         Traitée via dummy_rffa en Q6 : approche défendable.\n")
 cat("# Note : avec N=18, la puissance du test de Chow est limitée.\n")
 cat("# Absence de preuve ≠ preuve d'absence.\n")
 cat("# → Ces résultats motivent Q3 (outlier 2009) et Q6 (dummy RFFA).\n\n")
@@ -453,7 +453,7 @@ cat("# → Ces résultats motivent Q3 (outlier 2009) et Q6 (dummy RFFA).\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q3 — OUTLIER SUCCESSIONS 2009\n")
+cat("Q3 : OUTLIER SUCCESSIONS 2009\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : l'outlier 2009 dans les successions est isolé ici\n")
@@ -500,7 +500,7 @@ cat("# Une dummy_succ_2009 est créée pour usage éventuel.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q4 — TEST DE JOHANSEN — COINTÉGRATION\n")
+cat("Q4 : TEST DE JOHANSEN : COINTÉGRATION\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : les séries étant I(1) (Q1), on teste s'il existe\n")
@@ -508,7 +508,7 @@ cat("une relation de long terme stable entre elles.\n")
 cat("Ce résultat détermine VAR en différences vs VECM (script 03).\n\n")
 
 cat("⚠️  LIMITE : N=13 observations effectives après différenciation.\n")
-cat("    Puissance très faible — résultats indicatifs uniquement.\n\n")
+cat("    Puissance très faible : résultats indicatifs uniquement.\n\n")
 
 df_jo <- df %>%
   filter(annee >= 2008, annee <= 2022) %>%
@@ -528,8 +528,8 @@ cat("\n--- Test valeur propre maximale ---\n")
 summary(jo_eigen)
 
 cat("\n# DÉCISION Q4 :\n")
-cat("# Test trace : sur-rejette H0 sur petit N — moins fiable.\n")
-cat("# Test valeur propre max : plus conservateur — à privilégier.\n")
+cat("# Test trace : sur-rejette H0 sur petit N : moins fiable.\n")
+cat("# Test valeur propre max : plus conservateur : à privilégier.\n")
 cat("# En cas de divergence entre les deux tests :\n")
 cat("#   → principe de prudence → VAR en différences\n")
 cat("#   → avec documentation explicite de la divergence.\n")
@@ -552,7 +552,7 @@ cat("# → Cette décision est reportée dans le script 03.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q5 — CORRÉLATIONS MACRO SUR SÉRIES DIFFÉRENCIÉES\n")
+cat("Q5 : CORRÉLATIONS MACRO SUR SÉRIES DIFFÉRENCIÉES\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : recalculer les corrélations sur les variations annuelles\n")
@@ -572,7 +572,7 @@ df_diff <- df %>%
   ) %>%
   filter(!is.na(d_total))
 
-cat("Matrice de corrélation — NIVEAUX (pour référence) :\n")
+cat("Matrice de corrélation : NIVEAUX (pour référence) :\n")
 cor_niveaux <- df %>%
   filter(!is.na(pib_ge)) %>%
   dplyr::select(total, ben_pm, ifd, fortune, pib_ge, saron, ipc) %>%
@@ -580,7 +580,7 @@ cor_niveaux <- df %>%
   round(2)
 print(cor_niveaux)
 
-cat("\nMatrice de corrélation — DIFFÉRENCES PREMIÈRES :\n")
+cat("\nMatrice de corrélation : DIFFÉRENCES PREMIÈRES :\n")
 cor_diff <- df_diff %>%
   dplyr::select(d_total, d_ben_pm, d_ifd,
                 d_fortune, d_pib, d_saron, d_ipc) %>%
@@ -610,7 +610,7 @@ cat("# → Ce résultat guide le choix des régresseurs dans le script 03.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("Q6 — DUMMIES RFFA, COVID ET CRÉATION DES VARIABLES\n")
+cat("Q6 : DUMMIES RFFA, COVID ET CRÉATION DES VARIABLES\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : Q2 a identifié les ruptures candidates. On quantifie\n")
@@ -652,13 +652,13 @@ cat("# dummy_succ_2009 : en réserve pour usage éventuel\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("SYNTHÈSE — DÉCISIONS POUR LE SCRIPT 03\n")
+cat("SYNTHÈSE : DÉCISIONS POUR LE SCRIPT 03\n")
 cat("=============================================================\n\n")
 
 cat("SÉRIES RETENUES :\n")
 cat("  Cible principale  : total recettes (I(1) confirmé)\n")
 cat("  Composantes       : ben_pm, fortune, ifd (I(1) confirmés)\n")
-cat("  Proxy IR          : pp_total (cohérent 2007–2024, décision Q7)\n")
+cat("  Proxy IR          : pp_total (cohérent 2007-2024, décision Q7)\n")
 cat("  Fortune           : EXCLUE des régresseurs (corr. diff = 0.05)\n")
 cat("  Successions       : exclues (volatilité + outlier, décision Q3)\n\n")
 
@@ -669,9 +669,9 @@ cat("  dummy_succ_2009  (=1 si annee == 2009) → en réserve\n\n")
 
 cat("MODÈLES À CONSTRUIRE DANS LE SCRIPT 03 :\n")
 cat("  Étape 1 : ARIMA baseline (auto.arima, d=1 forcé par Q1)\n")
-cat("  Étape 2 : ETS — comparaison directe avec ARIMA\n")
-cat("  Étape 3 : ARIMAX — ARIMA + dummy_rffa via xreg\n")
+cat("  Étape 2 : ETS : comparaison directe avec ARIMA\n")
+cat("  Étape 3 : ARIMAX : ARIMA + dummy_rffa via xreg\n")
 cat("  Étape 4 : VAR ou VECM selon résultat Johansen (Q4)\n\n")
 
 cat("→ Chaque modèle du script 03 sera motivé par les résultats\n")
-cat("  du modèle précédent — approche inductive maintenue.\n")
+cat("  du modèle précédent : approche inductive maintenue.\n")

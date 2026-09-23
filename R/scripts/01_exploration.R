@@ -278,7 +278,7 @@ print(desc)
 # Taux de croissance annuel moyen (TCAM) — séries fiscales principales
 tcam <- function(x, n) (x[n] / x[1])^(1/(n-1)) - 1
 
-cat("\nTCAM 2007–2024 :\n")
+cat("\nTCAM 2007-2024 :\n")
 cat("  Total recettes :", round(tcam(df$total, 18) * 100, 2), "%\n")
 cat("  IR             :", round(tcam(df$ir, 18) * 100, 2), "%\n")
 cat("  Bénéfice PM    :", round(tcam(df$ben_pm, 18) * 100, 2), "%\n")
@@ -287,7 +287,7 @@ cat("  IFD            :", round(tcam(df$ifd, 18) * 100, 2), "%\n")
 # Coefficient de variation (volatilité relative)
 cv <- function(x) round(sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE) * 100, 1)
 
-cat("\nCoefficient de variation (%) — mesure de volatilité :\n")
+cat("\nCoefficient de variation (%) : mesure de volatilité :\n")
 cat("  Total recettes :", cv(df$total), "%\n")
 cat("  IR             :", cv(df$ir), "%\n")
 cat("  Bénéfice PM    :", cv(df$ben_pm), "%\n")
@@ -319,9 +319,9 @@ print(df %>% dplyr::select(annee, total, var_total, var_total_p) %>%
 
 couleurs <- c("#2C3E50", "#E74C3C", "#2980B9", "#27AE60", "#F39C12")
 
-# Identifier les années avec variation > 10% ou < -5%
+# Années commentées dans l'analyse (voir README, section 1)
 ruptures <- df %>%
-  filter(abs(var_total_p) > 8 | annee %in% c(2009, 2010, 2020)) %>%
+  filter(annee %in% c(2010, 2018, 2020, 2022)) %>%
   filter(!is.na(var_total_p))
 
 g1 <- ggplot(df, aes(x = annee, y = total)) +
@@ -343,8 +343,8 @@ g1 <- ggplot(df, aes(x = annee, y = total)) +
   ) +
   scale_x_continuous(breaks = seq(2007, 2024, by = 2)) +
   labs(
-    title    = "Recettes fiscales totales — Canton de Genève, 2007–2024",
-    subtitle = "Les cercles rouges signalent les années avec une variation supérieure à 8%",
+    title    = "Recettes fiscales totales : Canton de Genève, 2007-2024",
+    subtitle = "Cercles rouges : années commentées dans l'analyse (2010, 2018, 2020, 2022)",
     x = NULL, y = NULL,
     caption  = "Source : OCSTAT, T18.02.1.15 | Unité : milliards de CHF"
   ) +
@@ -368,7 +368,7 @@ df_long <- df %>%
                              "ben_pm"    = "Impôt sur le bénéfice (PM)",
                              "fortune"   = "Impôt sur la fortune (PP)",
                              "ifd"       = "Part cantonale IFD",
-                             "enreg_timbre"= "Enregistrement et timbre (OCSTAT)n"
+                             "enreg_timbre"= "Enregistrement et timbre"
   ))
 
 g2 <- ggplot(df_long, aes(x = annee, y = valeur, color = composante)) +
@@ -379,7 +379,7 @@ g2 <- ggplot(df_long, aes(x = annee, y = valeur, color = composante)) +
   scale_x_continuous(breaks = seq(2007, 2024, by = 2)) +
   labs(
     title    = "Décomposition des recettes fiscales par composante",
-    subtitle = "Cinq composantes principales — Canton de Genève, 2007–2024",
+    subtitle = "Cinq composantes principales : Canton de Genève, 2007-2024",
     x = NULL, y = "Millions CHF",
     color    = NULL,
     caption  = "Source : OCSTAT, T18.02.1.15"
@@ -403,10 +403,10 @@ g3_saron <- ggplot(df, aes(x = annee, y = saron)) +
   geom_point(color = couleurs[2], size = 2) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   annotate("text", x = 2016, y = -0.5,
-           label = "Taux négatifs\n2015–2022",
+           label = "Taux négatifs\n2015-2022",
            size = 3, color = "grey40") +
   scale_x_continuous(breaks = seq(2007, 2024, by = 2)) +
-  labs(title = "Taux SARON — moyenne annuelle",
+  labs(title = "Taux SARON : moyenne annuelle",
        x = NULL, y = "%",
        caption = "Source : BNS, data.snb.ch") +
   theme_minimal(base_size = 10) +
@@ -417,7 +417,7 @@ g3_ipc <- ggplot(df, aes(x = annee, y = ipc)) +
   geom_point(color = couleurs[3], size = 2) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   scale_x_continuous(breaks = seq(2007, 2024, by = 2)) +
-  labs(title = "Inflation IPC — moyenne annuelle",
+  labs(title = "Inflation IPC : moyenne annuelle",
        x = NULL, y = "%",
        caption = "Source : OFS via BNS, data.snb.ch") +
   theme_minimal(base_size = 10) +
@@ -430,8 +430,8 @@ g3_pib <- ggplot(df %>% filter(!is.na(pib_ge)),
   scale_y_continuous(labels = label_number(scale = 1/1000,
                                            suffix = " Mrd")) +
   scale_x_continuous(breaks = seq(2008, 2022, by = 2)) +
-  labs(title = "PIB nominal — Canton de Genève",
-       subtitle = "2008–2022 (2022 = provisoire)",
+  labs(title = "PIB nominal : Canton de Genève",
+       subtitle = "2008-2022 (2022 = provisoire)",
        x = NULL, y = "Milliards CHF",
        caption = "Source : OFS, Comptes régionaux") +
   theme_minimal(base_size = 10) +
@@ -439,7 +439,7 @@ g3_pib <- ggplot(df %>% filter(!is.na(pib_ge)),
 
 (g3_saron + g3_ipc) / g3_pib +
   plot_annotation(
-    title = "Variables macroéconomiques — Suisse et Genève",
+    title = "Variables macroéconomiques : Suisse et Genève",
     theme = theme(plot.title = element_text(face = "bold"))
   )
 
@@ -496,8 +496,8 @@ g4d <- ggplot(df, aes(x = enreg_timbre, y = ben_pm)) +
 (g4a + g4b) / (g4c + g4d) +
   plot_annotation(
     title    = "Relations entre recettes fiscales et variables macro",
-    subtitle = "Nuages de points avec droite de régression — 2007–2024",
-    caption  = "Note : 2022–2024 sont des années atypiques (RFFA) — à interpréter avec prudence",
+    subtitle = "Nuages de points avec droite de régression : 2007-2024",
+    caption  = "Note : 2022-2024 sont des années atypiques (rupture 2022) : à interpréter avec prudence",
     theme    = theme(plot.title = element_text(face = "bold"))
   )
 
@@ -506,7 +506,7 @@ g4d <- ggplot(df, aes(x = enreg_timbre, y = ben_pm)) +
 # -----------------------------------------------------------------------------
 
 cat("\n=== MATRICE DE CORRÉLATION ===\n")
-cat("(sur la fenêtre commune 2008–2022 avec PIB)\n\n")
+cat("(sur la fenêtre commune 2008-2022 avec PIB)\n\n")
 
 df_corr_mat <- df %>%
   filter(!is.na(pib_ge)) %>%
@@ -524,22 +524,22 @@ print(df_corr_mat)
 cat("\n=== ANOMALIES ET POINTS ATYPIQUES ===\n\n")
 
 cat("Successions 2009 :", df$successions[df$annee == 2009],
-    "M — outlier majeur (médiane :", round(median(df$successions), 0), "M)\n")
+    "M : outlier majeur (médiane :", round(median(df$successions), 0), "M)\n")
 
 cat("Variation totale 2022 :",
     round(df$var_total_p[df$annee == 2022], 1),
-    "% — plus forte hausse de la série\n")
+    "% : plus forte hausse de la série\n")
 
 cat("Variation totale 2010 :",
     round(df$var_total_p[df$annee == 2010], 1),
-    "% — plus forte baisse de la série\n")
+    "% : plus forte baisse de la série\n")
 
 cat("IFD 2023 :", df$ifd[df$annee == 2023],
-    "M — niveau exceptionnel (médiane :",
+    "M : niveau exceptionnel (médiane :",
     round(median(df$ifd), 0), "M)\n")
 
 cat("Bénéfice PM 2023 :", df$ben_pm[df$annee == 2023],
-    "M — niveau exceptionnel (médiane :",
+    "M : niveau exceptionnel (médiane :",
     round(median(df$ben_pm), 0), "M)\n")
 
 # Sauvegarde des graphiques
@@ -557,36 +557,36 @@ cat("\n✓ Graphiques sauvegardés\n")
 
 cat("\n")
 cat("=============================================================\n")
-cat("QUESTIONS POSÉES PAR LES DONNÉES — À TRAITER DANS LE SCRIPT 02\n")
+cat("QUESTIONS POSÉES PAR LES DONNÉES : À TRAITER DANS LE SCRIPT 02\n")
 cat("=============================================================\n\n")
 
-cat("Q1 — STATIONNARITÉ\n")
+cat("Q1 : STATIONNARITÉ\n")
 cat("    Les séries ont une tendance de fond visible et des ruptures en 2010\n")
 cat("    et 2022. Sont-elles stationnaires ? De quel ordre d'intégration ?\n")
 cat("    → Tests ADF et Phillips-Perron sur chaque série principale\n\n")
 
-cat("Q2 — RUPTURES STRUCTURELLES\n")
+cat("Q2 : RUPTURES STRUCTURELLES\n")
 cat("    2009 (successions), 2010 (baisse post-crise), 2020 (COVID),\n")
 cat("    2022-2023 (RFFA) sont des années visuellement atypiques.\n")
 cat("    Ces ruptures sont-elles statistiquement confirmées ?\n")
 cat("    → Test de Chow sur 2009, 2020 et 2022\n\n")
 
-cat("Q3 — OUTLIER SUCCESSIONS 2009\n")
+cat("Q3 : OUTLIER SUCCESSIONS 2009\n")
 cat("    308M en 2009 contre une médiane de ~190M.\n")
 cat("    Comment traiter cet outlier dans les modèles ?\n")
 cat("    → Dummy variable ou exclusion à documenter\n\n")
 
-cat("Q4 — COINTÉGRATION\n")
+cat("Q4 : COINTÉGRATION\n")
 cat("    Si total, ben_pm et ifd sont I(1), sont-ils cointégrés ?\n")
 cat("    La réponse détermine VAR en différences vs VECM.\n")
 cat("    → Test de Johansen sur la fenêtre commune disponible\n\n")
 
-cat("Q5 — RELATIONS AVEC LES VARIABLES MACRO\n")
+cat("Q5 : RELATIONS AVEC LES VARIABLES MACRO\n")
 cat("    La matrice de corrélation montre des corrélations élevées\n")
 cat("    mais potentiellement spurieuses (séries non stationnaires).\n")
 cat("    → À traiter après les tests de stationnarité\n\n")
 
-cat("Q6 — TRAITEMENT DE LA RFFA\n")
+cat("Q6 : TRAITEMENT DE LA RFFA\n")
 cat("    La hausse 2022-2023 est partiellement attribuable à la RFFA.\n")
 cat("    Faut-il une dummy variable ? À partir de quelle année ?\n")
 cat("    → Dummy RFFA = 1 à partir de 2022, testée formellement\n\n")

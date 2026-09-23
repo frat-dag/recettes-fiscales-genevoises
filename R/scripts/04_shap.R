@@ -68,7 +68,7 @@ couleurs <- c("#2C3E50", "#E74C3C", "#2980B9", "#27AE60", "#F39C12")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("PARTIE A — CONSTRUCTION DES FEATURES\n")
+cat("PARTIE A : CONSTRUCTION DES FEATURES\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI : features lag uniquement (anti-leakage).\n")
@@ -95,7 +95,7 @@ df_ml_clean <- df_ml %>%
   filter(complete.cases(.))
 
 cat("Observations après construction des features :", nrow(df_ml_clean), "\n")
-cat("Période :", min(df_ml_clean$annee), "–",
+cat("Période :", min(df_ml_clean$annee), "-",
     max(df_ml_clean$annee), "\n\n")
 
 # Vérification anti-leakage
@@ -116,16 +116,16 @@ cat("  Aucune valeur de l'année t n'est utilisée pour prédire t. ✓\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("PARTIE B — SPLIT TRAIN / TEST\n")
+cat("PARTIE B : SPLIT TRAIN / TEST\n")
 cat("=============================================================\n\n")
 
 train <- df_ml_clean %>% filter(annee <= 2021)
 test  <- df_ml_clean %>% filter(annee >= 2022)
 
 cat("Train :", nrow(train), "obs (", min(train$annee),
-    "–", max(train$annee), ")\n")
+    "-", max(train$annee), ")\n")
 cat("Test  :", nrow(test),  "obs (", min(test$annee),
-    "–", max(test$annee),  ")\n\n")
+    "-", max(test$annee),  ")\n\n")
 
 features <- c("total_lag1", "total_lag2", "ben_pm_lag1",
               "ifd_lag1", "saron_lag1", "ipc_lag1",
@@ -148,7 +148,7 @@ y_test  <- test$total
 # =============================================================================
 
 cat("=============================================================\n")
-cat("PARTIE C — RANDOM FOREST\n")
+cat("PARTIE C : RANDOM FOREST\n")
 cat("=============================================================\n\n")
 
 set.seed(42)
@@ -170,7 +170,7 @@ pred_test  <- predict(rf_model, newdata = X_test)
 rmse_rf    <- sqrt(mean((pred_test - y_test)^2))
 mape_rf    <- mean(abs((pred_test - y_test) / y_test)) * 100
 
-cat("\n--- Performance test set (2022–2024) ---\n")
+cat("\n--- Performance test set (2022-2024) ---\n")
 cat("RMSE :", round(rmse_rf), "M CHF\n")
 cat("MAPE :", round(mape_rf, 1), "%\n\n")
 
@@ -186,14 +186,14 @@ cat("--- Prédictions vs réalisations (test) ---\n")
 print(resultats_test)
 
 cat("\n# NOTE SUR LES PERFORMANCES RF :\n")
-cat("# Le RF est entraîné sur 2009–2021 — il n'a pas vu les niveaux\n")
-cat("# exceptionnels de 2022–2024 (RFFA). La sous-prédiction est attendue\n")
+cat("# Le RF est entraîné sur 2009-2021 : il n'a pas vu les niveaux\n")
+cat("# exceptionnels de 2022-2024 (RFFA). La sous-prédiction est attendue\n")
 cat("# et documentée. Le RF n'est PAS un modèle de prévision ici.\n")
-cat("# Son apport est l'analyse SHAP des drivers — voir Partie D.\n\n")
+cat("# Son apport est l'analyse SHAP des drivers : voir Partie D.\n\n")
 
 # Validation walk-forward — distribution de RMSE
 cat("--- Validation walk-forward ---\n")
-cat("(RMSE sur fenêtres glissantes — plus robuste que test unique)\n\n")
+cat("(RMSE sur fenêtres glissantes : plus robuste que test unique)\n\n")
 
 rmse_wf <- numeric()
 for (i in seq(10, nrow(df_ml_clean) - 3)) {
@@ -241,7 +241,7 @@ cat("# réelle des performances du RF selon la fenêtre d'entraînement.\n\n")
 # =============================================================================
 
 cat("=============================================================\n")
-cat("PARTIE D — SHAP VALUES\n")
+cat("PARTIE D : SHAP VALUES\n")
 cat("=============================================================\n\n")
 
 cat("POURQUOI SHAP : mesure signée et locale de la contribution\n")
@@ -273,12 +273,12 @@ cat("=== IMPORTANCE SHAP GLOBALE (M CHF) ===\n")
 cat("(contribution moyenne absolue à la prédiction)\n\n")
 print(shap_importance)
 
-cat("\n# NOTE IMPORTANTE — dummy_rffa = 0M en SHAP :\n")
+cat("\n# NOTE IMPORTANTE : dummy_rffa = 0M en SHAP :\n")
 cat("# La dummy_rffa vaut 0 pour toutes les observations du training\n")
-cat("# (2009–2021). Le Random Forest n'a jamais vu dummy_rffa = 1\n")
-cat("# pendant l'entraînement — il ne peut donc pas apprendre son effet.\n")
+cat("# (2009-2021). Le Random Forest n'a jamais vu dummy_rffa = 1\n")
+cat("# pendant l'entraînement : il ne peut donc pas apprendre son effet.\n")
 cat("# Cela explique pourquoi SHAP = 0M pour cette variable.\n")
-cat("# Ce résultat est cohérent et attendu — il ne remet pas en cause\n")
+cat("# Ce résultat est cohérent et attendu : il ne remet pas en cause\n")
 cat("# le coefficient ARIMAX (+1398M, p≈0) qui reste la mesure\n")
 cat("# de référence de l'effet RFFA.\n\n")
 
@@ -291,7 +291,7 @@ labels_features <- c(
   "saron_lag1"  = "Taux SARON (t-1)",
   "ipc_lag1"    = "Inflation IPC (t-1)",
   "trend"       = "Tendance temporelle",
-  "dummy_rffa"  = "Effet RFFA 2022+"
+  "dummy_rffa"  = "Dummy 2022+"
 )
 
 # =============================================================================
@@ -299,7 +299,7 @@ labels_features <- c(
 # =============================================================================
 
 cat("=============================================================\n")
-cat("PARTIE E — GRAPHIQUES SHAP\n")
+cat("PARTIE E : GRAPHIQUES SHAP\n")
 cat("=============================================================\n\n")
 
 # --- Graphique 1 : Importance SHAP globale ---
@@ -318,10 +318,10 @@ g_shap_imp <- ggplot(shap_imp_df,
   coord_flip() +
   scale_y_continuous(limits = c(0, max(shap_imp_df$shap_moyen) * 1.15)) +
   labs(
-    title    = "Drivers des recettes fiscales — Analyse SHAP",
+    title    = "Drivers des recettes fiscales : Analyse SHAP",
     subtitle = paste0("Contribution moyenne absolue de chaque variable\n",
                       "à la prédiction (en millions CHF)\n",
-                      "⚠️  N=13 en training — indicateurs de direction,",
+                      "⚠️  N=13 en training : indicateurs de direction,",
                       " pas mesures précises"),
     x = NULL, y = "SHAP moyen absolu (M CHF)",
     caption  = paste0("Modèle : Random Forest (ntree=1000, nsim=200) | ",
@@ -371,7 +371,7 @@ g_shap_bee <- ggplot(shap_long_top5,
     midpoint = 0
   ) +
   labs(
-    title    = "Distribution des SHAP — Top 5 drivers",
+    title    = "Distribution des SHAP : Top 5 drivers",
     subtitle = paste0("Chaque point = une année d'observation\n",
                       "Rouge = pousse les recettes vers le haut | ",
                       "Bleu = pousse vers le bas"),
@@ -417,8 +417,8 @@ g_comp_imp <- imp_rf_df %>%
   scale_fill_manual(values = c(couleurs[3], couleurs[4])) +
   facet_wrap(~methode, scales = "free_x") +
   labs(
-    title    = "Importance des variables — RF classique vs SHAP",
-    subtitle = "Deux méthodes, même classement → robustesse de la conclusion",
+    title    = "Importance des variables : RF classique vs SHAP",
+    subtitle = "Deux méthodes d'importance : classements proches, N=13",
     x = NULL, y = NULL,
     fill     = NULL,
     caption  = "Random Forest (ntree=1000) | SHAP (nsim=200)"
@@ -438,7 +438,7 @@ ggsave(file.path("R", "figures", "04_shap_vs_rf_importance.png"), g_comp_imp,
 # =============================================================================
 
 cat("\n=============================================================\n")
-cat("SYNTHÈSE — DRIVERS DES RECETTES FISCALES GENEVOISES\n")
+cat("SYNTHÈSE : DRIVERS DES RECETTES FISCALES GENEVOISES\n")
 cat("=============================================================\n\n")
 
 cat("TOP DRIVERS IDENTIFIÉS PAR SHAP :\n\n")
@@ -463,7 +463,7 @@ cat("   SHAP moyen =", shap_importance[5], "M CHF\n\n")
 cat("CONCLUSION PRINCIPALE :\n")
 cat("Les recettes fiscales genevoises sont principalement déterminées\n")
 cat("par leur propre dynamique passée (mémoire fiscale) et par les\n")
-cat("bénéfices des personnes morales — principal vecteur de transmission\n")
+cat("bénéfices des personnes morales : principal vecteur de transmission\n")
 cat("entre l'activité économique genevoise et les recettes de l'État.\n\n")
 
 cat("LIMITE À DOCUMENTER :\n")
